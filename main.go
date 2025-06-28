@@ -360,8 +360,12 @@ func runInteractiveTUI(info *SystemInfo) error {
 
 	var shouldReboot bool = false
 	// Clear the old overview and show updated one
-	// Count lines to clear: switchBootPartition output (verbose logging) + partition box lines
-	fmt.Print("\033[20A") // Move up 20 lines to overwrite all fw_setenv output
+	// Different number of lines to clear based on dry run vs real mode
+	if *dryRun {
+		fmt.Print("\033[10A") // Move up 10 lines in dry run mode
+	} else {
+		fmt.Print("\033[20A") // Move up 20 lines for real fw_setenv output
+	}
 	fmt.Print("\033[J")   // Clear from cursor to end of screen
 	
 	displaySystemInfo(updatedInfo)

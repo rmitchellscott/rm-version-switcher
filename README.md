@@ -1,6 +1,10 @@
 # reMarkable Version Switcher
+[![rm1](https://img.shields.io/badge/rM1-supported-green)](https://remarkable.com/store/remarkable)
+[![rm2](https://img.shields.io/badge/rM2-supported-green)](https://remarkable.com/store/remarkable-2)
 
 A beginner-friendly application for switching between reMarkable OS versions with an interactive interface.
+
+Supports reMarkable 1 and 2 at this time.
 
 ## Features
 
@@ -10,61 +14,46 @@ A beginner-friendly application for switching between reMarkable OS versions wit
 - **Smart partition mapping** - Consistent A/B labeling (A=p2, B=p3)
 - **Integrated reboot option** - Choose to reboot immediately or defer to next restart
 
+<div align="center">
+  <video src="https://github.com/rmitchellscott/rm-version-switcher/raw/refs/heads/video/assets/rm-version-switcher.mp4"></video>
+</div>
+
 ## Installation
 
 ### Download Latest Release
 
-For **ARMv7** systems (reMarkable 1 & 2):
+For **reMarkable 1 & 2** (ARMv7):
 ```bash
 wget https://github.com/rmitchellscott/rm-version-switcher/releases/latest/download/rm-version-switcher.tar.gz
 tar -xzf rm-version-switcher.tar.gz
 ```
 
-For **ARM64/AArch64** systems (reMarkable Paper Pro):
-```bash
-wget https://github.com/rmitchellscott/rm-version-switcher/releases/latest/download/rmpp-version-switcher.tar.gz
-tar -xzf rmpp-version-switcher.tar.gz
-```
-
 Verify installation:
 ```bash
 rm-version-switcher --help
-# or for aarch64:
-rmpp-version-switcher --help
 ```
 
 ### Manual Copy to Device
 
-Alternatively, copy the appropriate binary directly to your reMarkable device:
+Alternatively, copy the binary directly to your reMarkable device:
 
 ```bash
 # Copy to reMarkable 1/2 (replace with your device IP)
 scp rm-version-switcher root@10.11.99.1:~/
-
-# Copy to reMarkable Paper Pro (replace with your device IP)  
-scp rmpp-version-switcher root@10.11.99.1:~/
 ```
 
 ## Usage
 
 ### Interactive Mode
 ```bash
-# reMarkable 1 & 2
 ./rm-version-switcher
-
-# reMarkable Paper Pro
-./rmpp-version-switcher
 ```
 
 Shows the overview, allows you to change the next boot partition, and optionally reboot immediately.
 
 ### View Only Mode
 ```bash
-# reMarkable 1 & 2
 ./rm-version-switcher --show-only
-
-# reMarkable Paper Pro
-./rmpp-version-switcher --show-only
 ```
 
 Display current partition status without any interactive options.
@@ -84,11 +73,6 @@ go mod tidy
 #### reMarkable 1 & reMarkable 2 (ARMv7)
 ```bash
 GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o rm-version-switcher .
-```
-
-#### reMarkable Paper Pro (ARM64)
-```bash
-GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o rmpp-version-switcher .
 ```
 
 ### Build for Development/Testing

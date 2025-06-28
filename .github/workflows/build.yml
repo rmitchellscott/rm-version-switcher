@@ -18,8 +18,5 @@ jobs:
       - name: Build ARMv7
         run: GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o rm-version-switcher .
 
-      - name: Build ARM64
-        run: GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o rmpp-version-switcher .
-
       - name: Test
         run: go test -v ./...
