@@ -14,6 +14,10 @@ Supports reMarkable 1 and 2 at this time.
 - **Smart partition mapping** - Consistent A/B labeling (A=p2, B=p3)
 - **Integrated reboot option** - Choose to reboot immediately or defer to next restart
 
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/941202e1-67c5-45c2-8df2-b66b6a084a61"></video>
+</div>
+
 ## Installation
 
 ### Download Latest Release
@@ -22,11 +26,6 @@ For **reMarkable 1 & 2** (ARMv7):
 ```bash
 wget https://github.com/rmitchellscott/rm-version-switcher/releases/latest/download/rm-version-switcher.tar.gz
 tar -xzf rm-version-switcher.tar.gz
-```
-
-Verify installation:
-```bash
-rm-version-switcher --help
 ```
 
 ### Manual Copy to Device
