@@ -15,7 +15,7 @@ Supports reMarkable 1 and 2 at this time.
 - **Integrated reboot option** - Choose to reboot immediately or defer to next restart
 
 <div align="center">
-  <video src="https://github.com/rmitchellscott/rm-version-switcher/raw/refs/heads/video/assets/rm-version-switcher.mp4"></video>
+  <video src="https://github.com/user-attachments/assets/941202e1-67c5-45c2-8df2-b66b6a084a61"></video>
 </div>
 
 ## Installation
@@ -23,6 +23,10 @@ Supports reMarkable 1 and 2 at this time.
 ### Download Latest Release
 
 For **reMarkable 1 & 2** (ARMv7):
+
+
+
+
 ```bash
 wget https://github.com/rmitchellscott/rm-version-switcher/releases/latest/download/rm-version-switcher.tar.gz
 tar -xzf rm-version-switcher.tar.gz
