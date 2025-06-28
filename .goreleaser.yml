@@ -1,0 +1,45 @@
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: armv7
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - arm
+    goarm:
+      - 7
+    binary: rm-version-switcher
+    
+  - id: aarch64
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - arm64
+    binary: rmpp-version-switcher
+    
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{- if eq .Arch "arm" }}{{ .Binary }}
+      {{- else if eq .Arch "arm64" }}{{ .Binary }}
+      {{- else }}{{ .ProjectName }}{{ end }}
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'

@@ -1,0 +1,25 @@
+name: Build
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: stable
+
+      - name: Build ARMv7
+        run: GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o rm-version-switcher .
+
+      - name: Build ARM64
+        run: GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o rmpp-version-switcher .
+
+      - name: Test
+        run: go test -v ./...
