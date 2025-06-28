@@ -2,7 +2,7 @@
 [![rm1](https://img.shields.io/badge/rM1-supported-green)](https://remarkable.com/store/remarkable)
 [![rm2](https://img.shields.io/badge/rM2-supported-green)](https://remarkable.com/store/remarkable-2)
 
-A beginner-friendly application for switching between reMarkable OS versions with an interactive interface.
+A beginner-friendly application for switching between currently installed reMarkable OS versions with an interactive interface.
 
 Supports reMarkable 1 and 2 at this time.
 
