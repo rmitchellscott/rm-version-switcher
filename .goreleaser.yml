@@ -12,7 +12,15 @@ builds:
       - arm
     goarm:
       - 7
-    binary: rm-version-switcher
+    binary: rm-version-switcher-armv7
+  - id: aarch64
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - arm64
+    binary: rm-version-switcher-aarch64
     
 
 archives:
