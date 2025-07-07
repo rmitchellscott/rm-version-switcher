@@ -1,10 +1,11 @@
 # reMarkable Version Switcher
 [![rm1](https://img.shields.io/badge/rM1-supported-green)](https://remarkable.com/store/remarkable)
 [![rm2](https://img.shields.io/badge/rM2-supported-green)](https://remarkable.com/store/remarkable-2)
+[![rmpp](https://img.shields.io/badge/rM_Paper_Pro-supported-green)](https://remarkable.com/store/remarkable-paper-pro)
 
 A beginner-friendly application for switching between currently installed reMarkable OS versions with an interactive interface.
 
-Supports reMarkable 1 and 2 at this time.
+Supports reMarkable 1, 2, and Paper Pro.
 
 ## Features
 
@@ -20,20 +21,46 @@ Supports reMarkable 1 and 2 at this time.
 
 ## Installation
 
-### Download Latest Release
+### Automatic Installation (Recommended)
 
-For **reMarkable 1 & 2** (ARMv7):
+> [!CAUTION]
+> Piping code from the internet directly into `bash` can be dangerous. Make sure you trust the source and know what it will do to your system.
+
+The easiest way to install is using the installation script that automatically detects your device architecture:
+
 ```bash
-wget https://github.com/rmitchellscott/rm-version-switcher/releases/latest/download/rm-version-switcher.tar.gz
-tar -xzf rm-version-switcher.tar.gz
+wget -O - https://raw.githubusercontent.com/rmitchellscott/rm-version-switcher/main/install.sh | bash
 ```
 
-### Manual Copy to Device
+This will:
+- Detect your device architecture (reMarkable 1/2 or Paper Pro)
+- Download the correct binary for your device
+- Extract and make it executable as `rm-version-switcher`
+
+### Manual Installation
+
+#### For reMarkable 1 & 2 (ARMv7):
+```bash
+wget https://github.com/rmitchellscott/rm-version-switcher/releases/latest/download/rm-version-switcher-armv7.tar.gz
+tar -xzf rm-version-switcher-armv7.tar.gz
+mv rm-version-switcher-armv7 rm-version-switcher
+chmod +x rm-version-switcher
+```
+
+#### For reMarkable Paper Pro (AArch64):
+```bash
+wget https://github.com/rmitchellscott/rm-version-switcher/releases/latest/download/rm-version-switcher-aarch64.tar.gz
+tar -xzf rm-version-switcher-aarch64.tar.gz
+mv rm-version-switcher-aarch64 rm-version-switcher
+chmod +x rm-version-switcher
+```
+
+### Copy to Device
 
 Alternatively, copy the binary directly to your reMarkable device:
 
 ```bash
-# Copy to reMarkable 1/2 (replace with your device IP)
+# Copy to reMarkable (replace with your device IP)
 scp rm-version-switcher root@10.11.99.1:~/
 ```
 
@@ -67,7 +94,12 @@ go mod tidy
 
 #### reMarkable 1 & reMarkable 2 (ARMv7)
 ```bash
-GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o rm-version-switcher .
+GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o rm-version-switcher-armv7 .
+```
+
+#### reMarkable Paper Pro (AArch64)
+```bash
+GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o rm-version-switcher-aarch64 .
 ```
 
 ### Build for Development/Testing

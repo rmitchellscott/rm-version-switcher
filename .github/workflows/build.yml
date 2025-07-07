@@ -16,7 +16,10 @@ jobs:
           go-version: stable
 
       - name: Build ARMv7
-        run: GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o rm-version-switcher .
+        run: GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o rm-version-switcher-armv7 .
+
+      - name: Build AArch64
+        run: GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o rm-version-switcher-aarch64 .
 
       - name: Test
         run: go test -v ./...
