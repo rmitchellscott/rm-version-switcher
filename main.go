@@ -208,8 +208,8 @@ func getVersionFromPartition(partNum int, isActive bool) (string, error) {
 			return "", fmt.Errorf("failed to mount partition %d: %w", partNum, err)
 		}
 
-		// Use /etc/os-release from mounted partition
-		if version, err := getVersionFromOSReleaseAtPath(fmt.Sprintf("%s/etc/os-release", mountPoint)); err == nil {
+		// Try to get version from mounted partition
+		if version, err := getVersionFromPartitionPath(mountPoint); err == nil {
 			return version, nil
 		}
 		return "unknown", nil
@@ -682,7 +682,19 @@ func getPaperProPartitionInfo() (int, int, int, error) {
 }
 
 func switchPaperProBootPartition(newPart int, version string) error {
-	// Map partition numbers to Paper Pro partition labels
+	// Check if version is 3.22 or higher
+	if compareVersions(version, "3.22") >= 0 {
+		// Use rootdev --switch for version 3.22+
+		if err := exec.Command("rootdev", "--switch").Run(); err != nil {
+			return fmt.Errorf("failed to run rootdev --switch: %w", err)
+		}
+
+		fmt.Printf("Successfully set Paper Pro next boot to version %s (partition %d) using rootdev --switch\n", version, newPart)
+		fmt.Println("Reboot to boot into the selected partition.")
+		return nil
+	}
+
+	// Fall back to legacy Paper Pro method for versions < 3.22
 	var newPartLabel string
 	if newPart == 2 {
 		newPartLabel = "a"
@@ -704,28 +716,84 @@ func switchPaperProBootPartition(newPart int, version string) error {
 }
 
 func getVersionFromOSRelease() (string, error) {
-	return getVersionFromOSReleaseAtPath("/etc/os-release")
+	return getVersionFromPartitionPath("")
 }
 
-func getVersionFromOSReleaseAtPath(path string) (string, error) {
+func getVersionFromPartitionPath(basePath string) (string, error) {
+	// Try update.conf first (RELEASE_VERSION)
+	updateConfPath := basePath + "/usr/share/remarkable/update.conf"
+	if basePath == "" {
+		updateConfPath = "/usr/share/remarkable/update.conf"
+	}
+	
+	if version, err := readVersionFromFile(updateConfPath, "RELEASE_VERSION="); err == nil {
+		return version, nil
+	}
+
+	// Fall back to os-release (IMG_VERSION)
+	osReleasePath := basePath + "/etc/os-release"
+	if basePath == "" {
+		osReleasePath = "/etc/os-release"
+	}
+	
+	if version, err := readVersionFromFile(osReleasePath, "IMG_VERSION="); err == nil {
+		return version, nil
+	}
+
+	return "", fmt.Errorf("version not found in update.conf or os-release")
+}
+
+func readVersionFromFile(path, prefix string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to open os-release file: %w", err)
+		return "", fmt.Errorf("failed to open file %s: %w", path, err)
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "IMG_VERSION=") {
-			version := strings.TrimPrefix(line, "IMG_VERSION=")
-			// Remove quotes if present
-			version = strings.Trim(version, `"`)
-			return version, nil
+		// Check if line contains the prefix (supports wildcard before RELEASE_VERSION)
+		if strings.Contains(line, prefix) {
+			// Find the position of the prefix and extract everything after it
+			idx := strings.Index(line, prefix)
+			if idx != -1 {
+				version := line[idx+len(prefix):]
+				// Remove quotes if present
+				version = strings.Trim(version, `"`)
+				return version, nil
+			}
 		}
 	}
 
-	return "", fmt.Errorf("IMG_VERSION not found in os-release file")
+	return "", fmt.Errorf("%s not found in file %s", prefix, path)
+}
+
+func compareVersions(v1, v2 string) int {
+	parts1 := strings.Split(v1, ".")
+	parts2 := strings.Split(v2, ".")
+
+	maxLen := len(parts1)
+	if len(parts2) > maxLen {
+		maxLen = len(parts2)
+	}
+
+	for i := 0; i < maxLen; i++ {
+		var num1, num2 int
+		if i < len(parts1) {
+			num1, _ = strconv.Atoi(parts1[i])
+		}
+		if i < len(parts2) {
+			num2, _ = strconv.Atoi(parts2[i])
+		}
+
+		if num1 < num2 {
+			return -1
+		} else if num1 > num2 {
+			return 1
+		}
+	}
+	return 0
 }
 
 func logToFile(message string) {

@@ -329,3 +329,31 @@ func TestInvalidDryRunFile(t *testing.T) {
 		t.Errorf("Expected NextBoot to default to 3 with out of range file, got %d", info.NextBoot)
 	}
 }
+
+func TestCompareVersions(t *testing.T) {
+	tests := []struct {
+		v1       string
+		v2       string
+		expected int
+	}{
+		{"3.22", "3.21", 1},
+		{"3.21", "3.22", -1},
+		{"3.22", "3.22", 0},
+		{"3.22.0", "3.22", 0},
+		{"3.22", "3.22.0", 0},
+		{"3.22.1", "3.22.0", 1},
+		{"3.20.0.92", "3.22", -1},
+		{"3.22.5.10", "3.22", 1},
+		{"4.0", "3.22", 1},
+		{"2.99", "3.22", -1},
+		{"3.22.0.0", "3.22", 0},
+		{"10.1", "2.99", 1},
+	}
+
+	for _, test := range tests {
+		result := compareVersions(test.v1, test.v2)
+		if result != test.expected {
+			t.Errorf("compareVersions(%s, %s) = %d, expected %d", test.v1, test.v2, result, test.expected)
+		}
+	}
+}
