@@ -208,8 +208,8 @@ func getVersionFromPartition(partNum int, isActive bool) (string, error) {
 			return "", fmt.Errorf("failed to mount partition %d: %w", partNum, err)
 		}
 
-		// Use /etc/os-release from mounted partition
-		if version, err := getVersionFromOSReleaseAtPath(fmt.Sprintf("%s/etc/os-release", mountPoint)); err == nil {
+		// Try to get version from mounted partition
+		if version, err := getVersionFromPartitionPath(mountPoint); err == nil {
 			return version, nil
 		}
 		return "unknown", nil
@@ -630,30 +630,92 @@ func saveDryRunBootPartition(partition int) error {
 }
 
 func isPaperProDevice() bool {
+	// List of known Paper Pro model names
+	paperProModels := []string{
+		"Ferrari",
+		"Chiappa",
+	}
+
 	// Check if this is a Paper Pro device by examining the device tree model
-	if err := exec.Command("grep", "-q", "reMarkable Ferrari", "/proc/device-tree/model").Run(); err == nil {
-		return true
+	for _, model := range paperProModels {
+		pattern := fmt.Sprintf("reMarkable %s", model)
+		if err := exec.Command("grep", "-q", pattern, "/proc/device-tree/model").Run(); err == nil {
+			return true
+		}
 	}
 	return false
 }
 
-func getPaperProPartitionInfo() (int, int, int, error) {
-	// Get running partition from mount info
-	mountOut, err := exec.Command("bash", "-c", "mount | grep ' / ' | cut -d' ' -f1").Output()
-	if err != nil {
-		return 0, 0, 0, fmt.Errorf("failed to get mount info: %w", err)
-	}
-
-	runningDevStr := strings.TrimSpace(string(mountOut))
+// Helper function to get partition number from device path (e.g., /dev/mmcblk0p2 -> 2)
+func getPartitionNumberFromDevice(device string) (int, error) {
 	re := regexp.MustCompile(`p(\d+)$`)
-	matches := re.FindStringSubmatch(runningDevStr)
+	matches := re.FindStringSubmatch(device)
 	if len(matches) < 2 {
-		return 0, 0, 0, fmt.Errorf("could not parse partition number from %s", runningDevStr)
+		return 0, fmt.Errorf("could not parse partition number from %s", device)
+	}
+	return strconv.Atoi(matches[1])
+}
+
+// Helper function to get the next boot partition based on OS version
+func getPaperProNextBootPartition(currentVersion string) (int, error) {
+	// Check if version is 3.22 or higher
+	if compareVersions(currentVersion, "3.22") >= 0 {
+		// For 3.22+, read from the new mmc boot_part location
+		bootPartData, err := os.ReadFile("/sys/bus/mmc/devices/mmc0:0001/boot_part")
+		if err != nil {
+			// Fallback to old location if new one doesn't exist
+			if os.IsNotExist(err) {
+				return getPaperProNextBootPartitionLegacy()
+			}
+			return 0, fmt.Errorf("failed to read boot_part: %w", err)
+		}
+		
+		bootPart := strings.TrimSpace(string(bootPartData))
+		// In 3.22+: "1" means root_a (partition 2), "2" means root_b (partition 3)
+		if bootPart == "1" {
+			return 2, nil
+		} else if bootPart == "2" {
+			return 3, nil
+		}
+		return 0, fmt.Errorf("unexpected boot_part value: %s", bootPart)
+	}
+	
+	// For versions < 3.22, use the legacy method
+	return getPaperProNextBootPartitionLegacy()
+}
+
+// Helper function for legacy next boot partition detection
+func getPaperProNextBootPartitionLegacy() (int, error) {
+	nextBootPartData, err := os.ReadFile("/sys/devices/platform/lpgpr/root_part")
+	if err != nil {
+		return 0, fmt.Errorf("failed to read root_part: %w", err)
+	}
+	
+	nextBootPart := strings.TrimSpace(string(nextBootPartData))
+	if nextBootPart == "a" {
+		return 2, nil
+	} else if nextBootPart == "b" {
+		return 3, nil
+	}
+	return 0, fmt.Errorf("unexpected root_part value: %s", nextBootPart)
+}
+
+func getPaperProPartitionInfo() (int, int, int, error) {
+	// Get active partition using swupdate -g (like reference scripts)
+	activePartOut, err := exec.Command("swupdate", "-g").Output()
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("failed to get active partition: %w", err)
 	}
 
-	runningP, err := strconv.Atoi(matches[1])
+	activeDevice := strings.TrimSpace(string(activePartOut))
+	runningP, err := getPartitionNumberFromDevice(activeDevice)
 	if err != nil {
-		return 0, 0, 0, fmt.Errorf("invalid partition number: %w", err)
+		return 0, 0, 0, fmt.Errorf("failed to parse active partition: %w", err)
+	}
+
+	// Validate partition number
+	if runningP != 2 && runningP != 3 {
+		return 0, 0, 0, fmt.Errorf("unexpected partition number: %d", runningP)
 	}
 
 	// Determine other partition
@@ -662,34 +724,69 @@ func getPaperProPartitionInfo() (int, int, int, error) {
 		otherP = 3
 	}
 
-	// Get next boot partition from Paper Pro specific location
-	nextBootPartData, err := os.ReadFile("/sys/devices/platform/lpgpr/root_part")
+	// Get current OS version to determine which sysfs path to use
+	currentVersion, err := getVersionFromOSRelease()
 	if err != nil {
-		return runningP, otherP, runningP, nil // fallback to current
+		// If we can't get version, assume legacy behavior
+		currentVersion = "3.20"
 	}
 
-	nextBootPart := strings.TrimSpace(string(nextBootPartData))
-	var bootP int
-	if nextBootPart == "a" {
-		bootP = 2
-	} else if nextBootPart == "b" {
-		bootP = 3
-	} else {
-		bootP = runningP // fallback to current
+	// Get next boot partition using version-aware method
+	bootP, err := getPaperProNextBootPartition(currentVersion)
+	if err != nil {
+		// Fallback to current partition if we can't determine next boot
+		bootP = runningP
 	}
 
 	return runningP, otherP, bootP, nil
 }
 
-func switchPaperProBootPartition(newPart int, version string) error {
-	// Map partition numbers to Paper Pro partition labels
+func switchPaperProBootPartition(newPart int, targetVersion string) error {
+	// Validate partition number
+	if newPart != 2 && newPart != 3 {
+		return fmt.Errorf("invalid partition number: %d", newPart)
+	}
+
+	// Get current running version to determine which method we can use
+	currentVersion, err := getVersionFromOSRelease()
+	if err != nil {
+		// If we can't determine current version, assume we need to use mmc for safety
+		currentVersion = "3.22"
+	}
+
+	// Determine which switching method to use:
+	// 1. If currently running 3.22+: MUST use mmc (permission denied on sysfs write)
+	// 2. If target is 3.22+: SHOULD use mmc (to properly set up boot for 3.22+)
+	// 3. Otherwise: Use legacy sysfs write
+	useMmcMethod := compareVersions(currentVersion, "3.22") >= 0 || compareVersions(targetVersion, "3.22") >= 0
+
+	if useMmcMethod {
+		// Use mmc bootpart enable commands
+		// Based on reference script: partition 2 (root_a) uses boot0, partition 3 (root_b) uses boot1
+		var mmcCmd []string
+		if newPart == 2 {
+			// Switch to root_a: enable boot partition 1 on mmcblk0boot0
+			mmcCmd = []string{"mmc", "bootpart", "enable", "1", "0", "/dev/mmcblk0boot0"}
+		} else {
+			// Switch to root_b: enable boot partition 2 on mmcblk0boot1
+			mmcCmd = []string{"mmc", "bootpart", "enable", "2", "0", "/dev/mmcblk0boot1"}
+		}
+
+		if err := exec.Command(mmcCmd[0], mmcCmd[1:]...).Run(); err != nil {
+			return fmt.Errorf("failed to run mmc bootpart enable: %w", err)
+		}
+
+		fmt.Printf("Successfully set Paper Pro next boot to version %s (partition %d) using mmc bootpart\n", targetVersion, newPart)
+		fmt.Println("Reboot to boot into the selected partition.")
+		return nil
+	}
+
+	// Use legacy Paper Pro method only when BOTH current and target are < 3.22
 	var newPartLabel string
 	if newPart == 2 {
 		newPartLabel = "a"
-	} else if newPart == 3 {
-		newPartLabel = "b"
 	} else {
-		return fmt.Errorf("invalid partition number: %d", newPart)
+		newPartLabel = "b"
 	}
 
 	// Write the new partition label to the Paper Pro boot partition file
@@ -697,35 +794,91 @@ func switchPaperProBootPartition(newPart int, version string) error {
 		return fmt.Errorf("failed to set Paper Pro boot partition: %w", err)
 	}
 
-	fmt.Printf("Successfully set Paper Pro next boot to version %s (partition %d)\n", version, newPart)
+	fmt.Printf("Successfully set Paper Pro next boot to version %s (partition %d)\n", targetVersion, newPart)
 	fmt.Println("Reboot to boot into the selected partition.")
 
 	return nil
 }
 
 func getVersionFromOSRelease() (string, error) {
-	return getVersionFromOSReleaseAtPath("/etc/os-release")
+	return getVersionFromPartitionPath("")
 }
 
-func getVersionFromOSReleaseAtPath(path string) (string, error) {
+func getVersionFromPartitionPath(basePath string) (string, error) {
+	// Try update.conf first (RELEASE_VERSION)
+	updateConfPath := basePath + "/usr/share/remarkable/update.conf"
+	if basePath == "" {
+		updateConfPath = "/usr/share/remarkable/update.conf"
+	}
+	
+	if version, err := readVersionFromFile(updateConfPath, "RELEASE_VERSION="); err == nil {
+		return version, nil
+	}
+
+	// Fall back to os-release (IMG_VERSION)
+	osReleasePath := basePath + "/etc/os-release"
+	if basePath == "" {
+		osReleasePath = "/etc/os-release"
+	}
+	
+	if version, err := readVersionFromFile(osReleasePath, "IMG_VERSION="); err == nil {
+		return version, nil
+	}
+
+	return "", fmt.Errorf("version not found in update.conf or os-release")
+}
+
+func readVersionFromFile(path, prefix string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to open os-release file: %w", err)
+		return "", fmt.Errorf("failed to open file %s: %w", path, err)
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "IMG_VERSION=") {
-			version := strings.TrimPrefix(line, "IMG_VERSION=")
-			// Remove quotes if present
-			version = strings.Trim(version, `"`)
-			return version, nil
+		// Check if line contains the prefix (supports wildcard before RELEASE_VERSION)
+		if strings.Contains(line, prefix) {
+			// Find the position of the prefix and extract everything after it
+			idx := strings.Index(line, prefix)
+			if idx != -1 {
+				version := line[idx+len(prefix):]
+				// Remove quotes if present
+				version = strings.Trim(version, `"`)
+				return version, nil
+			}
 		}
 	}
 
-	return "", fmt.Errorf("IMG_VERSION not found in os-release file")
+	return "", fmt.Errorf("%s not found in file %s", prefix, path)
+}
+
+func compareVersions(v1, v2 string) int {
+	parts1 := strings.Split(v1, ".")
+	parts2 := strings.Split(v2, ".")
+
+	maxLen := len(parts1)
+	if len(parts2) > maxLen {
+		maxLen = len(parts2)
+	}
+
+	for i := 0; i < maxLen; i++ {
+		var num1, num2 int
+		if i < len(parts1) {
+			num1, _ = strconv.Atoi(parts1[i])
+		}
+		if i < len(parts2) {
+			num2, _ = strconv.Atoi(parts2[i])
+		}
+
+		if num1 < num2 {
+			return -1
+		} else if num1 > num2 {
+			return 1
+		}
+	}
+	return 0
 }
 
 func logToFile(message string) {
