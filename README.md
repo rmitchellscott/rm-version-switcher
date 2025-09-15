@@ -1,7 +1,7 @@
 # reMarkable Version Switcher
 [![rm1](https://img.shields.io/badge/rM1-supported-green)](https://remarkable.com/store/remarkable)
 [![rm2](https://img.shields.io/badge/rM2-supported-green)](https://remarkable.com/store/remarkable-2)
-[![rmpp](https://img.shields.io/badge/rM_Paper_Pro-supported-green)](https://remarkable.com/products/remarkable-paper/pro)
+[![rmpp](https://img.shields.io/badge/rMPP-supported-green)](https://remarkable.com/products/remarkable-paper/pro)
 [![rmppm](https://img.shields.io/badge/rMPPM-supported-green)](https://remarkable.com/products/remarkable-paper/pro-move)
 
 A beginner-friendly application for switching between currently installed reMarkable OS versions with an interactive interface.
