@@ -26,6 +26,8 @@ builds:
 archives:
   - format: tar.gz
     name_template: "{{ .Binary }}"
+    files:
+      - none*
 
 checksum:
   name_template: 'checksums.txt'
