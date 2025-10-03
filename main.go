@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -15,7 +14,10 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	pflag "github.com/spf13/pflag"
 )
+
+var version = "dev"
 
 type PartitionInfo struct {
 	Number     int
@@ -32,10 +34,11 @@ type SystemInfo struct {
 }
 
 var (
-	dryRun      = flag.Bool("dry-run", false, "Enable dry run mode for testing")
-	showOnly    = flag.Bool("show-only", false, "Only display current partition info, don't show selector")
-	resetDryRun = flag.Bool("reset-dry-run", false, "Reset dry run state to defaults")
-	debug       = flag.Bool("debug", false, "Enable debug logging to debug.log file")
+	showVersion = pflag.BoolP("version", "v", false, "Print version information and exit")
+	dryRun      = pflag.Bool("dry-run", false, "Enable dry run mode for testing")
+	showOnly    = pflag.BoolP("show-only", "s", false, "Only display current partition info, don't show selector")
+	resetDryRun = pflag.Bool("reset-dry-run", false, "Reset dry run state to defaults")
+	debug       = pflag.BoolP("debug", "d", false, "Enable debug logging to debug.log file")
 
 	// Styles
 	activeStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
@@ -58,7 +61,12 @@ var (
 )
 
 func main() {
-	flag.Parse()
+	pflag.Parse()
+
+	if *showVersion {
+		fmt.Println(version)
+		return
+	}
 
 	if *resetDryRun {
 		os.Remove("dry-run-boot.txt")
