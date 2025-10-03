@@ -105,7 +105,7 @@ main() {
     # Check if binary already exists
     if [ -f "$BINARY_NAME" ]; then
         print_warning "rm-version-switcher already exists in current directory"
-        read -p "Do you want to continue and overwrite? (y/N): " -n 1 -r
+        read -p "Do you want to continue and overwrite? (y/N): " -n 1 -r </dev/tty
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             print_status "Installation cancelled."
