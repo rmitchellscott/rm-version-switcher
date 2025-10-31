@@ -10,11 +10,6 @@ Supports reMarkable 1, 2, Paper Pro, and Paper Pro Move.
 
 Tested up to OS version 3.22.
 
-> [!NOTE]
-> **Known Issues**  
-> - (Paper Pro) Booting from 3.20 or lower after that partition has been upgraded to 3.22 or higher [may not be possible](https://github.com/rmitchellscott/rm-version-switcher/issues/18).
-> 
-
 ## Features
 
 - **TUI interface** - Clean, boxed layout with color-coded partitions

@@ -762,13 +762,34 @@ func switchPaperProBootPartition(newPart int, targetVersion string) error {
 		currentVersion = "3.22"
 	}
 
-	// Determine which switching method to use:
-	// 1. If currently running 3.22+: MUST use mmc (permission denied on sysfs write)
-	// 2. If target is 3.22+: SHOULD use mmc (to properly set up boot for 3.22+)
-	// 3. Otherwise: Use legacy sysfs write
-	useMmcMethod := compareVersions(currentVersion, "3.22") >= 0 || compareVersions(targetVersion, "3.22") >= 0
+	// Determine which switching methods to use:
+	// - When transitioning between version ranges, we may need to use BOTH methods
+	// - Current < 3.22: Use sysfs write (current OS needs this to boot)
+	// - Target >= 3.22: Use mmc bootpart (target OS will read from this)
+	// - Current >= 3.22: Cannot use sysfs (permission denied), only mmc bootpart
+	currentIsNew := compareVersions(currentVersion, "3.22") >= 0
+	targetIsNew := compareVersions(targetVersion, "3.22") >= 0
 
-	if useMmcMethod {
+	var newPartLabel string
+	if newPart == 2 {
+		newPartLabel = "a"
+	} else {
+		newPartLabel = "b"
+	}
+
+	// Step 1: If current version is < 3.22, write to sysfs (for current OS to boot correctly)
+	if !currentIsNew {
+		if err := os.WriteFile("/sys/devices/platform/lpgpr/root_part", []byte(newPartLabel), 0644); err != nil {
+			return fmt.Errorf("failed to set Paper Pro boot partition via sysfs: %w", err)
+		}
+		if *debug {
+			logToFile(fmt.Sprintf("Set sysfs root_part to %s", newPartLabel))
+		}
+	}
+
+	// Step 2: If target version is >= 3.22 OR current version is >= 3.22, set mmc bootpart
+	// (target >= 3.22 needs mmc for target OS, current >= 3.22 can only use mmc)
+	if targetIsNew || currentIsNew {
 		// Use mmc bootpart enable commands
 		// Based on reference script: partition 2 (root_a) uses boot0, partition 3 (root_b) uses boot1
 		var mmcCmd []string
@@ -783,26 +804,21 @@ func switchPaperProBootPartition(newPart int, targetVersion string) error {
 		if err := exec.Command(mmcCmd[0], mmcCmd[1:]...).Run(); err != nil {
 			return fmt.Errorf("failed to run mmc bootpart enable: %w", err)
 		}
-
-		fmt.Printf("Successfully set Paper Pro next boot to version %s (partition %d) using mmc bootpart\n", targetVersion, newPart)
-		fmt.Println("Reboot to boot into the selected partition.")
-		return nil
+		if *debug {
+			logToFile(fmt.Sprintf("Set mmc bootpart: %v", mmcCmd))
+		}
 	}
 
-	// Use legacy Paper Pro method only when BOTH current and target are < 3.22
-	var newPartLabel string
-	if newPart == 2 {
-		newPartLabel = "a"
+	methodsUsed := ""
+	if !currentIsNew && targetIsNew {
+		methodsUsed = " (sysfs + mmc bootpart)"
+	} else if !currentIsNew && !targetIsNew {
+		methodsUsed = " (sysfs)"
 	} else {
-		newPartLabel = "b"
+		methodsUsed = " (mmc bootpart)"
 	}
 
-	// Write the new partition label to the Paper Pro boot partition file
-	if err := os.WriteFile("/sys/devices/platform/lpgpr/root_part", []byte(newPartLabel), 0644); err != nil {
-		return fmt.Errorf("failed to set Paper Pro boot partition: %w", err)
-	}
-
-	fmt.Printf("Successfully set Paper Pro next boot to version %s (partition %d)\n", targetVersion, newPart)
+	fmt.Printf("Successfully set Paper Pro next boot to version %s (partition %d)%s\n", targetVersion, newPart, methodsUsed)
 	fmt.Println("Reboot to boot into the selected partition.")
 
 	return nil
