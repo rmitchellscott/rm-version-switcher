@@ -777,6 +777,19 @@ func switchPaperProBootPartition(newPart int, targetVersion string) error {
 		newPartLabel = "b"
 	}
 
+	// Reset error count for target partition
+	errCntPath := fmt.Sprintf("/sys/devices/platform/lpgpr/root%s_errcnt", newPartLabel)
+	if err := os.WriteFile(errCntPath, []byte("0"), 0644); err != nil {
+		fmt.Printf("Warning: Could not reset error count at %s: %v\n", errCntPath, err)
+		if *debug {
+			logToFile(fmt.Sprintf("Warning: Failed to reset error count: %v", err))
+		}
+	} else {
+		if *debug {
+			logToFile(fmt.Sprintf("Reset error count at %s", errCntPath))
+		}
+	}
+
 	// Step 1: If current version is < 3.22, write to sysfs (for current OS to boot correctly)
 	if !currentIsNew {
 		if err := os.WriteFile("/sys/devices/platform/lpgpr/root_part", []byte(newPartLabel), 0644); err != nil {
