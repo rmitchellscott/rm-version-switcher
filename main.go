@@ -45,6 +45,7 @@ var (
 	fallbackStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("12"))
 	nextBootStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
 	dimStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	warningStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("13"))
 
 	boxStyle = lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder()).
@@ -70,6 +71,8 @@ func main() {
 
 	if *resetDryRun {
 		os.Remove("dry-run-boot.txt")
+		os.Remove("dry-run-device.txt")
+		os.Remove("dry-run-encrypted.txt")
 		fmt.Println("Reset dry run state to defaults")
 		return
 	}
@@ -361,6 +364,47 @@ func runInteractiveTUI(info *SystemInfo) error {
 		return nil
 	}
 
+	// Get target partition version
+	var targetVersion string
+	if selectedBoot == info.Active.Number {
+		targetVersion = info.Active.Version
+	} else {
+		targetVersion = info.Fallback.Version
+	}
+
+	// Check for encryption + pre-3.18 incompatibility (only affects non-Paper Pro devices)
+	if isEncryptionEnabled() && !info.IsPaperPro && compareVersions(targetVersion, "3.18") < 0 {
+		warningTitle := titleStyle.Width(46).Render("Cannot Switch to Pre-3.18 Firmware")
+
+		warningMsg := warningStyle.Width(46).Align(lipgloss.Center).Render(fmt.Sprintf(`This device has encryption enabled, which
+was introduced in firmware 3.18.
+
+Switching to version %s would make your
+device unbootable.
+
+Please disable encryption before
+downgrading to pre-3.18 firmware.`, targetVersion))
+
+		var abort bool = true
+
+		warningForm := huh.NewForm(
+			huh.NewGroup(
+				huh.NewConfirm().
+					Title(warningTitle).
+					Description(warningMsg).
+					Affirmative("CANCEL").
+					Negative("").
+					Value(&abort),
+			),
+		).WithTheme(huh.ThemeBase())
+
+		if err := warningForm.Run(); err != nil {
+			return fmt.Errorf("warning form error: %w", err)
+		}
+
+		return nil
+	}
+
 	// Step 3: Switch boot partition
 	if err := switchBootPartition(selectedBoot, info.NextBoot); err != nil {
 		return err
@@ -598,6 +642,9 @@ func getDryRunSystemInfo() (*SystemInfo, error) {
 		}
 	}
 
+	// Determine if Paper Pro based on dry-run-device.txt
+	isPaperPro := isPaperProDevice()
+
 	return &SystemInfo{
 		Active: PartitionInfo{
 			Number:     activePartition,
@@ -607,12 +654,12 @@ func getDryRunSystemInfo() (*SystemInfo, error) {
 		},
 		Fallback: PartitionInfo{
 			Number:     fallbackPartition,
-			Version:    "3.18.2.3",
+			Version:    "3.15.2",
 			IsActive:   false,
 			IsNextBoot: nextBootPartition == fallbackPartition,
 		},
 		NextBoot:   nextBootPartition,
-		IsPaperPro: false,
+		IsPaperPro: isPaperPro,
 	}, nil
 }
 
@@ -622,7 +669,7 @@ func saveDryRunBootPartition(partition int) error {
 	if partition == 3 {
 		version = "3.20.0.92"
 	} else {
-		version = "3.18.2.3"
+		version = "3.15.2"
 	}
 
 	fmt.Printf("[DRY RUN] Setting next boot to version %s (partition %d)\n", version, partition)
@@ -638,6 +685,18 @@ func saveDryRunBootPartition(partition int) error {
 }
 
 func isPaperProDevice() bool {
+	if *dryRun {
+		// Read device type from dry-run file
+		data, err := os.ReadFile("dry-run-device.txt")
+		if err != nil {
+			// Default to rm2
+			return false
+		}
+		deviceType := strings.TrimSpace(string(data))
+		// Paper Pro models: Ferrari, Chiappa
+		return deviceType == "Ferrari" || deviceType == "Chiappa"
+	}
+
 	// List of known Paper Pro model names
 	paperProModels := []string{
 		"Ferrari",
@@ -652,6 +711,28 @@ func isPaperProDevice() bool {
 		}
 	}
 	return false
+}
+
+func isEncryptionEnabled() bool {
+	if *dryRun {
+		// Read encryption state from dry-run file
+		data, err := os.ReadFile("dry-run-encrypted.txt")
+		if err != nil {
+			// Default to not encrypted
+			return false
+		}
+		encrypted := strings.TrimSpace(string(data))
+		return encrypted == "true"
+	}
+
+	// Check if /dev/mapper/ entries exist in /proc/mounts
+	data, err := os.ReadFile("/proc/mounts")
+	if err != nil {
+		return false
+	}
+
+	// Look for /dev/mapper/ entries which indicate encryption
+	return strings.Contains(string(data), "/dev/mapper/")
 }
 
 // Helper function to get partition number from device path (e.g., /dev/mmcblk0p2 -> 2)
@@ -677,7 +758,7 @@ func getPaperProNextBootPartition(currentVersion string) (int, error) {
 			}
 			return 0, fmt.Errorf("failed to read boot_part: %w", err)
 		}
-		
+
 		bootPart := strings.TrimSpace(string(bootPartData))
 		// In 3.22+: "1" means root_a (partition 2), "2" means root_b (partition 3)
 		if bootPart == "1" {
@@ -687,7 +768,7 @@ func getPaperProNextBootPartition(currentVersion string) (int, error) {
 		}
 		return 0, fmt.Errorf("unexpected boot_part value: %s", bootPart)
 	}
-	
+
 	// For versions < 3.22, use the legacy method
 	return getPaperProNextBootPartitionLegacy()
 }
@@ -698,7 +779,7 @@ func getPaperProNextBootPartitionLegacy() (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to read root_part: %w", err)
 	}
-	
+
 	nextBootPart := strings.TrimSpace(string(nextBootPartData))
 	if nextBootPart == "a" {
 		return 2, nil
@@ -847,7 +928,7 @@ func getVersionFromPartitionPath(basePath string) (string, error) {
 	if basePath == "" {
 		updateConfPath = "/usr/share/remarkable/update.conf"
 	}
-	
+
 	if version, err := readVersionFromFile(updateConfPath, "RELEASE_VERSION="); err == nil {
 		return version, nil
 	}
@@ -857,7 +938,7 @@ func getVersionFromPartitionPath(basePath string) (string, error) {
 	if basePath == "" {
 		osReleasePath = "/etc/os-release"
 	}
-	
+
 	if version, err := readVersionFromFile(osReleasePath, "IMG_VERSION="); err == nil {
 		return version, nil
 	}

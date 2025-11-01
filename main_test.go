@@ -77,8 +77,8 @@ func TestGetDryRunSystemInfo(t *testing.T) {
 	if info.Active.Version != "3.20.0.92" {
 		t.Errorf("Expected active version to be '3.20.0.92', got %s", info.Active.Version)
 	}
-	if info.Fallback.Version != "3.18.2.3" {
-		t.Errorf("Expected fallback version to be '3.18.2.3', got %s", info.Fallback.Version)
+	if info.Fallback.Version != "3.15.2" {
+		t.Errorf("Expected fallback version to be '3.15.2', got %s", info.Fallback.Version)
 	}
 
 	// Test with dry run file
@@ -150,7 +150,7 @@ func TestBuildSystemInfoDisplay(t *testing.T) {
 		},
 		Fallback: PartitionInfo{
 			Number:     2,
-			Version:    "3.18.2.3",
+			Version:    "3.15.2",
 			IsActive:   false,
 			IsNextBoot: false,
 		},
@@ -180,8 +180,8 @@ func TestBuildSystemInfoDisplay(t *testing.T) {
 	if !containsString(display, "3.20.0.92") {
 		t.Error("Display should contain version 3.20.0.92")
 	}
-	if !containsString(display, "3.18.2.3") {
-		t.Error("Display should contain version 3.18.2.3")
+	if !containsString(display, "3.15.2") {
+		t.Error("Display should contain version 3.15.2")
 	}
 
 	// Check that it contains status indicators
