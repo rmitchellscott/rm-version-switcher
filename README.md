@@ -50,7 +50,7 @@ mv rm-version-switcher-armv7 rm-version-switcher
 chmod +x rm-version-switcher
 ```
 
-#### For reMarkable Paper Pro (AArch64):
+#### For reMarkable Paper Pro & Paper Pro Move (AArch64):
 ```bash
 wget https://github.com/rmitchellscott/rm-version-switcher/releases/latest/download/rm-version-switcher-aarch64.tar.gz
 tar -xzf rm-version-switcher-aarch64.tar.gz
@@ -100,7 +100,7 @@ go mod tidy
 GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o rm-version-switcher-armv7 .
 ```
 
-#### reMarkable Paper Pro (AArch64)
+#### reMarkable Paper Pro & Paper Pro Move (AArch64)
 ```bash
 GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o rm-version-switcher-aarch64 .
 ```
