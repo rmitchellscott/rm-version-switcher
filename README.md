@@ -8,7 +8,7 @@ A beginner-friendly application for switching between currently installed reMark
 
 Supports reMarkable 1, 2, Paper Pro, and Paper Pro Move. 
 
-Tested up to OS version 3.22.
+Tested up to OS version 3.24.
 
 ## Features
 
