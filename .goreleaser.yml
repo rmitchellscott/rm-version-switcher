@@ -12,9 +12,11 @@ builds:
       - arm
     goarm:
       - 7
-    ldflags:
-      - -X main.version={{.Version}}
     binary: rm-version-switcher-armv7
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}}
   - id: aarch64
     env:
       - CGO_ENABLED=0
@@ -22,10 +24,16 @@ builds:
       - linux
     goarch:
       - arm64
-    ldflags:
-      - -X main.version={{.Version}}
     binary: rm-version-switcher-aarch64
-    
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+upx:
+  - enabled: true
+    compress: best
+    lzma: true
 
 archives:
   - format: tar.gz
