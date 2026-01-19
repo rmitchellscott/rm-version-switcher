@@ -24,7 +24,11 @@ Tested up to OS version 3.24.
 
 ## Installation
 
-### Automatic Installation (Recommended)
+### Via [Vellum package manager](https://github.com/vellum-dev/vellum)
+
+`vellum install rm-version-switcher`
+
+### Automatic Installation
 
 > [!CAUTION]
 > Piping code from the internet directly into `bash` can be dangerous. Make sure you trust the source and know what it will do to your system.
