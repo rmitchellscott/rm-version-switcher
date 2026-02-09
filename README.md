@@ -3,6 +3,7 @@
 [![rm2](https://img.shields.io/badge/rM2-supported-green)](https://remarkable.com/store/remarkable-2)
 [![rmpp](https://img.shields.io/badge/rMPP-supported-green)](https://remarkable.com/products/remarkable-paper/pro)
 [![rmppm](https://img.shields.io/badge/rMPPM-supported-green)](https://remarkable.com/products/remarkable-paper/pro-move)
+[![vellum](https://img.shields.io/badge/vellum-rm--version--switcher-purple)](https://vellum.delivery/#/package/rm-version-switcher)
 
 A beginner-friendly application for switching between currently installed reMarkable OS versions with an interactive interface.
 
