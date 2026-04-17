@@ -154,3 +154,8 @@ The application follows the same proven logic as the reference [switch.sh](https
 
 - [charmbracelet/huh](https://github.com/charmbracelet/huh) - TUI forms and interactions
 - [charmbracelet/lipgloss](https://github.com/charmbracelet/lipgloss) - Terminal styling
+
+## License
+Copyright (C) 2025 Mitchell Scott
+
+Licensed under the GNU General Public License v3.0.
