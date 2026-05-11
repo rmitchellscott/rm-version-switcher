@@ -2,14 +2,13 @@
 [![rm1](https://img.shields.io/badge/rM1-supported-green)](https://remarkable.com/store/remarkable)
 [![rm2](https://img.shields.io/badge/rM2-supported-green)](https://remarkable.com/store/remarkable-2)
 [![rmpp](https://img.shields.io/badge/rMPP-supported-green)](https://remarkable.com/products/remarkable-paper/pro)
-[![rmppm](https://img.shields.io/badge/rMPPM-supported-green)](https://remarkable.com/products/remarkable-paper/pro-move)
+[![rmppmove](https://img.shields.io/badge/rMPPMove-supported-green)](https://remarkable.com/products/remarkable-paper/pro-move)
+[![rmppure](https://img.shields.io/badge/rMPPure-supported-green)](https://remarkable.com/products/remarkable-paper/pure)
 [![vellum](https://img.shields.io/badge/vellum-rm--version--switcher-purple)](https://vellum.delivery/#/package/rm-version-switcher)
 
 A beginner-friendly application for switching between currently installed reMarkable OS versions with an interactive interface.
 
-Supports reMarkable 1, 2, Paper Pro, and Paper Pro Move. 
-
-Tested up to OS version 3.24.
+Command-line not your thing? Check out [reManager](https://remanager.io), a desktop application that can switch partitions and install different software versions.
 
 ## Features
 
